@@ -194,15 +194,27 @@ defmodule Monopoly.Game do
     repeat(count - 1, new_player, new_board)
   end
 
+  defp parse_args(args) do
+    # options = [switches: [file: :string], aliases: [f: :file]]
+    options = [switches: [turn: :number], aliases: [t: :turn]]
+
+    {opts, word, _} =
+      args
+      |> OptionParser.parse(options)
+
+    {opts, List.to_string(word)}
+  end
+
   def main(args) do
-    options = [switches: [file: :string], aliases: [f: :file]]
-    {opts, _, _} = OptionParser.parse(args, options)
+    {opts, _word} = parse_args(args)
     IO.inspect(opts, label: "Command Line Arguments")
 
     {player, board} = init("Féfé")
-    tour = 30_000
 
-    {player, board} = repeat(tour, player, board)
+    {player, board} =
+      opts[:turn]
+      |> String.to_integer()
+      |> repeat(player, board)
 
     Board.print_cases(board)
     Player.print(player)

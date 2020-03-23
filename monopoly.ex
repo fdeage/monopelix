@@ -1,7 +1,10 @@
 defmodule Log do
-  def print(msg1, msg2) do
-    # IO.puts(msg1)
-    # IO.inspect(msg2)
+  def print(msg1, msg2 \\ nil) do
+    # IO.puts("#{msg1}: #{msg2}")
+  end
+
+  def inspect(msg) do
+    # IO.inspect(msg)
   end
 end
 
@@ -12,15 +15,29 @@ end
 defmodule Player do
   defstruct [:name, :status, :case_id, :money]
 
-  def move_by(%Player{} = player, die) do
+  def move_by(%Player{} = player, die, pass_go_bonus? \\ true) do
     new_case_id = Integer.mod(player.case_id + die, 40)
     Log.print("Move player #{player.name} to", new_case_id)
+
+    player =
+      if new_case_id < player.case_id and pass_go_bonus? do
+        Player.change_money_by(player, 20_000)
+      else
+        player
+      end
 
     %Player{player | case_id: new_case_id}
   end
 
-  def move_to(%Player{} = player, case_id) do
+  def move_to(%Player{} = player, case_id, pass_go_bonus? \\ true) do
     Log.print("Move player #{player.name} to", case_id)
+
+    player =
+      if case_id < player.case_id and pass_go_bonus? do
+        Player.change_money_by(player, 20_000)
+      else
+        player
+      end
 
     %Player{player | case_id: case_id}
   end
@@ -28,6 +45,12 @@ defmodule Player do
   def put_in_jail(%Player{} = player) do
     Log.print("Move player #{player.name} to jail", nil)
     %Player{player | case_id: 10, status: :in_jail_3}
+  end
+
+  def change_money_by(%Player{} = player, amount) do
+    Log.print("Change player #{player.name}'s' money by ", amount)
+
+    %Player{player | money: player.money + amount}
   end
 end
 
@@ -42,7 +65,7 @@ end
 defmodule Board do
   defstruct [:cases, :players]
 
-  def increase_case_count(board, case_at) do
+  def increase_case_count(%Board{} = board, case_at) do
     new_case = Case.increment_count(board.cases |> Enum.at(case_at))
 
     %Board{board | cases: board.cases |> List.replace_at(case_at, new_case)}
@@ -76,7 +99,7 @@ defmodule Monopoly do
       |> :rand.uniform()
 
     comm = comm_cards |> Enum.at(rand - 1)
-    Log.print("Community card", comm)
+    Log.print("Community card", comm.name)
     comm
   end
 
@@ -106,7 +129,7 @@ defmodule Monopoly do
       |> :rand.uniform()
 
     chance = chance_cards |> Enum.at(rand - 1)
-    Log.print("Chance card", chance)
+    Log.print("Chance card", chance.name)
 
     chance
   end
@@ -115,14 +138,16 @@ defmodule Monopoly do
     :rand.uniform(6)
   end
 
-  def play(3, board: board, player: player) do
+  def play(3, %Board{} = board, %Player{} = player) do
+    # Log.print("Three doubles in a row")
+    IO.puts("Three doubles")
     player = Player.put_in_jail(player)
     board = Board.increase_case_count(board, 10)
 
-    [board: board, player: player]
+    {board, player}
   end
 
-  def play(double_count, board: board, player: player) do
+  def play(double_count, %Board{} = board, %Player{} = player) do
     dice1 = draw_dice()
     dice2 = draw_dice()
 
@@ -135,58 +160,70 @@ defmodule Monopoly do
       case player.case_id do
         0 -> %{type: :money, opt: 40_000}
         2 -> draw_community()
-        4 -> %{type: :money, opt: 40_000}
+        4 -> %{type: :money, opt: -20_000}
         7 -> draw_chance()
         17 -> draw_community()
         22 -> draw_chance()
         30 -> %{type: :move, opt: 10}
-        32 -> draw_community()
+        33 -> draw_community()
+        36 -> draw_chance()
+        38 -> %{type: :money, opt: -10_000}
         _ -> %{type: nil, opt: nil}
       end
 
-    Log.print("Action: ", action)
+    if action.type, do: Log.print("Action: ", action.type)
 
-    case action.type do
-      :money ->
-        player = %Player{player | money: player.money + action.opt}
+    {player, board} =
+      case action.type do
+        :money ->
+          {Player.change_money_by(player, action.opt), board}
 
-      :repair ->
-        player = %Player{player | money: player.money + action.opt.maisons + action.opt.hotels}
+        :repair ->
+          {Player.change_money_by(player, action.opt.maisons + action.opt.hotels), board}
 
-      :move ->
-        player = Player.move_to(player, action.opt)
-        # handle 20_000
-        board = Board.increase_case_count(board, player.case_id)
+        :move ->
+          old_case_id = player.case_id
+          player = Player.move_to(player, action.opt)
 
-      :move_relative ->
-        player = Player.move_by(player, action.opt)
-        board = Board.increase_case_count(board, player.case_id)
+          player =
+            if player.case_id < old_case_id and player.case_id !== 0 do
+              Log.print("Passage case Départ")
+              Player.change_money_by(player, 20_000)
+            else
+              player
+            end
 
-      :move_no_20_000 ->
-        player = Player.move_by(player, action.opt)
-        board = Board.increase_case_count(board, player.case_id)
+          board = Board.increase_case_count(board, player.case_id)
+          {player, board}
 
-      nil ->
-        player
+        :move_relative ->
+          {Player.move_by(player, action.opt), Board.increase_case_count(board, player.case_id)}
 
-      :fine_or_redraw ->
-        player
+        :move_no_20_000 ->
+          {Player.move_to(player, action.opt), Board.increase_case_count(board, player.case_id)}
 
-      :out_of_jail ->
-        player
+        nil ->
+          {player, board}
 
-      :birthday ->
-        player
-    end
+        :fine_or_redraw ->
+          {player, board}
+
+        :out_of_jail ->
+          {player, board}
+
+        :birthday ->
+          {player, board}
+      end
 
     if dice1 === dice2 do
-      [board: board, player: player] = play(double_count + 1, board: board, player: player)
+      Log.print("Double #{dice1}", "replay")
+      play(double_count + 1, board, player)
+    else
+      {board, player}
     end
-
-    [board: board, player: player]
   end
 
-  def init(player_name) do
+  def init(player_name) when is_binary(player_name) do
     player = %Player{name: player_name, status: :free, case_id: 0, money: 150_000}
 
     board = %Board{
@@ -238,19 +275,25 @@ defmodule Monopoly do
     {board, player}
   end
 
-  def repeat(0, board: board, player: player), do: [board: board, player: player]
+  def repeat(0, %Board{} = board, %Player{} = player), do: {board, player}
 
-  def repeat(count, board: board, player: player) do
+  def repeat(count, %Board{} = board, %Player{} = player) do
     double_count = 0
-    [board: board, player: player] = Monopoly.play(double_count, board: board, player: player)
-    repeat(count - 1, board: board, player: player)
+    {new_board, new_player} = Monopoly.play(double_count, board, player)
+
+    # IO.inspect(new_player)
+    # IO.puts("\n")
+
+    repeat(count - 1, new_board, new_player)
   end
 end
 
 {board, player} = Monopoly.init("Féfé")
-tour = 10_000
+tour = 1_000
+# tour = 20
 
-[board: board, player: player] = Monopoly.repeat(tour, board: board, player: player)
+{board, player} = Monopoly.repeat(tour, board, player)
 
-IO.inspect(player)
-IO.inspect(board.cases)
+Log.inspect(board.cases)
+Log.print(board.cases |> Enum.reduce(0, fn x, acc -> x.count + acc end))
+Log.inspect(player)

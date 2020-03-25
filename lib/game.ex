@@ -188,15 +188,16 @@ defmodule Monopoly.Game do
     {new_player, new_board} = play_turn(double_count, player, board)
     new_player = Player.increase_turn_count(new_player)
 
-    Logger.print(new_player)
-    Logger.print("\n")
+    if Application.get_env(:monopoly, :log_level) === :extra do
+      Logger.print(new_player)
+      Logger.print("\n")
+    end
 
     repeat(count - 1, new_player, new_board)
   end
 
   defp parse_args(args) do
-    # options = [switches: [file: :string], aliases: [f: :file]]
-    options = [switches: [turn: :number], aliases: [t: :turn]]
+    options = [switches: [turn: :number, debug: :boolean], aliases: [t: :turn, d: :debug]]
 
     {opts, word, _} =
       args
@@ -206,20 +207,21 @@ defmodule Monopoly.Game do
   end
 
   def main(args) do
-    {opts, _word} = parse_args(args)
-    IO.inspect(opts, label: "Command Line Arguments")
-
     {player, board} = init("Féfé")
 
-    {player, board} =
-      opts[:turn]
-      |> String.to_integer()
-      |> repeat(player, board)
+    {opts, _word} = parse_args(args)
+
+    turn =
+      if opts[:turn] do
+        opts[:turn]
+        |> String.to_integer()
+      else
+        Application.get_env(:monopoly, :default_turn)
+      end
+
+    {player, board} = repeat(turn, player, board)
 
     Board.print_cases(board)
     Player.print(player)
-    # IO.inspect(board.cases)
-    # IO.inspect(player)
-    IO.puts("yo")
   end
 end

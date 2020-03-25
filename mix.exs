@@ -12,10 +12,13 @@ defmodule Monopoly.MixProject do
     ]
   end
 
+  # log: :none | :basic | :all
+
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger]
+      extra_applications: [:logger],
+      env: [log_level: :all, default_turn: 50]
     ]
   end
 

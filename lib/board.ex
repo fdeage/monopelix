@@ -1,7 +1,7 @@
 defmodule Monopoly.Board do
   defstruct [:cases, :players, :free_park]
 
-  alias Monopoly.Case
+  alias Monopoly.{Case, Logger}
   alias __MODULE__
 
   def increase_case_count(%Board{} = board, case_at) do
@@ -24,8 +24,7 @@ defmodule Monopoly.Board do
     board.cases
     |> Enum.sort(fn x, y -> x.count < y.count end)
     |> Enum.map(fn x -> %{x | percent: Float.round(100 * x.count / total, 2)} end)
-    # |> Logger.print()
-    |> IO.inspect()
+    |> Logger.print()
   end
 
   def init_cases do

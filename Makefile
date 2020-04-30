@@ -18,7 +18,7 @@ $(COL_YEL)make g(et):$(COL_RST)           gets dependencies \n\
 $(COL_YEL)make i(ex):$(COL_RST)           launches an interactive elixir shell in a Phoenix context \n\
 $(COL_YEL)make info:$(COL_RST)            prints Elixir/OTP version \n\
 $(COL_YEL)make o(bserver):$(COL_RST)      starts the GenServer observer \n\
-$(COL_YEL)make t(est):$(COL_RST)          launches all tests \n\
+$(COL_YEL)make t(est):$(COL_RST)          launches all tests \n "
 h: help
 
 build:

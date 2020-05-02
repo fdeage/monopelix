@@ -1,29 +1,58 @@
 defmodule Monopoly.Board do
-  defstruct [:cases, :free_park]
+  defstruct [:cases, :free_park, :chance_deck, :community_deck]
 
-  alias Monopoly.Case
+  alias Monopoly.{Case, Decks}
   alias __MODULE__
 
   # %Board{free_park: pidxx1, cases: %{c0: pidxx2, c1: pidxx3}}
   def start_link do
     board = %Board{
-      free_park: initialized_free_park(),
-      cases: initialized_cases()
+      free_park: init_free_park(),
+      cases: init_cases(),
+      chance_deck: init_chance_deck(),
+      community_deck: init_community_deck()
     }
+
+    Decks.shuffle(board.chance_deck)
+    Decks.shuffle(board.community_deck)
 
     Agent.start_link(fn -> board end)
   end
 
-  defp initialized_cases do
+  defp init_cases do
     Enum.reduce(cases_map(), %{}, fn {name, index}, board ->
       {:ok, c} = Case.start_link(name: name)
       Map.put_new(board, String.to_atom("c#{index}"), c)
     end)
   end
 
-  defp initialized_free_park do
+  defp init_free_park do
     {:ok, free_park} = Agent.start_link(fn -> 0 end)
     free_park
+  end
+
+  defp init_chance_deck do
+    {:ok, chance_deck} = Decks.chance_start_link()
+    chance_deck
+  end
+
+  defp init_community_deck do
+    {:ok, community_deck} = Decks.community_start_link()
+    community_deck
+  end
+
+  def draw_dice do
+    :rand.uniform(6)
+  end
+
+  def draw_community(board) do
+    get(board, :community_deck)
+    |> Decks.draw()
+  end
+
+  def draw_chance(board) do
+    get(board, :chance_deck)
+    |> Decks.draw()
   end
 
   def increase_case_count(board, case_at) do

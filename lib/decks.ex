@@ -1,8 +1,40 @@
 defmodule Monopoly.Decks do
   alias Monopoly.{Card, Logger}
 
-  def draw_community do
-    comm_cards = [
+  # A deck is a List of %Card{}
+  def chance_start_link do
+    Agent.start_link(fn -> chance_cards() |> init_deck() end)
+  end
+
+  def community_start_link do
+    Agent.start_link(fn -> community_cards() |> init_deck() end)
+  end
+
+  def init_deck(cards) do
+    Enum.reduce(cards, [], fn card, deck ->
+      {:ok, card_pid} = Card.start_link(name: card.name, type: card.type, opt: card.opt)
+      [card_pid | deck]
+    end)
+  end
+
+  def draw(deck) do
+    first = Agent.get(deck, fn list -> List.first(list) end)
+
+    Agent.update(deck, fn list ->
+      {head, tail} = List.pop_at(list, 0)
+      tail ++ [head]
+    end)
+
+    Logger.print("Community card", Card.get(first, :name))
+    first |> Card.get()
+  end
+
+  def shuffle(deck) do
+    Agent.update(deck, fn deck -> Enum.shuffle(deck) end)
+  end
+
+  defp community_cards do
+    [
       %Card{name: "Héritez", type: :money, opt: 10_000},
       %Card{name: "Deuxième prix de beauté", type: :money, opt: 1_000},
       %Card{name: "Allez en prison", type: :move_no_20_000, opt: 10},
@@ -20,20 +52,10 @@ defmodule Monopoly.Decks do
       %Card{name: "Retournez à Belleville", type: :move_no_20_000, opt: 1},
       %Card{name: "Contributions vous remboursent", type: :money, opt: 2_000}
     ]
-
-    rand =
-      comm_cards
-      |> length()
-      |> :rand.uniform()
-
-    comm = comm_cards |> Enum.at(rand - 1)
-    Logger.print("Community card", comm.name)
-
-    comm
   end
 
-  def draw_chance do
-    chance_cards = [
+  defp chance_cards do
+    [
       %Card{name: "Ivresse", type: :money, opt: -2_000},
       %Card{name: "Allez à Henri-Martin", type: :move, opt: 23},
       %Card{name: "Mots croisés", type: :money, opt: 10_000},
@@ -51,15 +73,5 @@ defmodule Monopoly.Decks do
       %Card{name: "Allez bd de la Villette", type: :move, opt: 11},
       %Card{name: "Libéré de prison", type: :out_of_jail, opt: nil}
     ]
-
-    rand =
-      chance_cards
-      |> length()
-      |> :rand.uniform()
-
-    chance = chance_cards |> Enum.at(rand - 1)
-    Logger.print("Chance card", chance.name)
-
-    chance
   end
 end

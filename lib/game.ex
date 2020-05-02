@@ -1,21 +1,15 @@
 defmodule Monopoly.Game do
-  alias Monopoly.{Board, Player, Logger, Decks}
-
-  defp draw_dice do
-    :rand.uniform(6)
-  end
+  alias Monopoly.{Board, Player, Logger}
 
   def play_turn(3, player, board) do
     Logger.print("Three doubles in a row")
-    player = Player.put_in_jail(player)
-    board = Board.increase_case_count(board, 10)
-
-    {player, board}
+    Player.put_in_jail(player)
+    Board.increase_case_count(board, 10)
   end
 
   def play_turn(double_count, player, board) do
-    dice1 = draw_dice()
-    dice2 = draw_dice()
+    dice1 = Board.draw_dice()
+    dice2 = Board.draw_dice()
 
     Logger.print("Die: #{dice1} + #{dice2}", dice1 + dice2)
 
@@ -27,15 +21,15 @@ defmodule Monopoly.Game do
     action =
       case Player.get(player, :case_id) do
         0 -> %{type: :money, opt: 40_000}
-        2 -> Decks.draw_community()
+        2 -> Board.draw_community(board)
         4 -> %{type: :money, opt: -20_000}
-        7 -> Decks.draw_chance()
-        17 -> Decks.draw_community()
+        7 -> Board.draw_chance(board)
+        17 -> Board.draw_community(board)
         20 -> %{type: :free_park, opt: nil}
-        22 -> Decks.draw_chance()
+        22 -> Board.draw_chance(board)
         30 -> %{type: :move, opt: 10}
-        33 -> Decks.draw_community()
-        36 -> Decks.draw_chance()
+        33 -> Board.draw_community(board)
+        36 -> Board.draw_chance(board)
         38 -> %{type: :money, opt: -10_000}
         _ -> %{type: nil, opt: nil}
       end

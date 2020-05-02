@@ -66,9 +66,6 @@ defmodule Monopoly.Player do
 
   def change_money_by(p, amount) do
     Logger.print("Change player #{get(p, :name)}'s' money by ", amount)
-
-    # IO.inspect(amount, label: "yo")
-
     set(p, :money, get(p, :money) + amount)
   end
 

@@ -1,74 +1,130 @@
 defmodule Monopoly.Board do
-  defstruct [:cases, :players, :free_park]
+  defstruct [:cases, :free_park]
 
-  alias Monopoly.{Case, Logger}
+  alias Monopoly.Case
   alias __MODULE__
 
-  def increase_case_count(%Board{} = board, case_at) do
-    new_case = Case.increment_count(board.cases |> Enum.at(case_at))
+  # %Board{free_park: pidxx1, cases: %{c0: pidxx2, c1: pidxx3}}
+  def start_link do
+    board = %Board{
+      free_park: initialized_free_park(),
+      cases: initialized_cases()
+    }
 
-    %Board{board | cases: board.cases |> List.replace_at(case_at, new_case)}
+    Agent.start_link(fn -> board end)
   end
 
-  def empty_free_park_bounty(%Board{} = board) do
-    %Board{board | free_park: 0}
+  defp initialized_cases do
+    Enum.reduce(cases_map(), %{}, fn {name, index}, board ->
+      {:ok, c} = Case.start_link(name: name)
+      Map.put_new(board, String.to_atom("c#{index}"), c)
+    end)
   end
 
-  def increase_free_park_bounty_by(%Board{} = board, amount) do
-    %Board{board | free_park: board.free_park + amount}
+  defp initialized_free_park do
+    {:ok, free_park} = Agent.start_link(fn -> 0 end)
+    free_park
   end
 
-  def print_cases(%Board{} = board) do
-    total = board.cases |> Enum.reduce(0, fn x, acc -> x.count + acc end)
-
-    board.cases
-    |> Enum.sort(fn x, y -> x.count < y.count end)
-    |> Enum.map(fn x -> %{x | percent: Float.round(100 * x.count / total, 2)} end)
-    |> Logger.print()
+  def increase_case_count(board, case_at) do
+    get_cases(board)
+    |> Map.get("c#{case_at}" |> String.to_atom())
+    |> Case.increment_count()
   end
 
-  def init_cases do
+  # returns a map of pids
+  def get_cases(board) do
+    get(board, :cases)
+  end
+
+  def get_free_park_bounty(board) do
+    get(board, :free_park)
+    |> Agent.get(& &1)
+  end
+
+  def empty_free_park_bounty(board) do
+    get(board, :free_park)
+    |> Agent.update(fn _ -> 0 end)
+  end
+
+  def increase_free_park_bounty_by(board, amount) do
+    get(board, :free_park)
+    |> Agent.update(fn initial -> initial + amount end)
+  end
+
+  def compute_percentages(board) do
+    cases = get_cases(board)
+
+    total =
+      cases
+      |> Enum.reduce(0, fn {_key, val}, acc -> acc + Case.count(val) end)
+
+    cases
+    |> Enum.map(fn {_, x} ->
+      Case.set(x, :percent, Float.round(100 * Case.count(x) / total, 2))
+    end)
+  end
+
+  def to_string(board) do
+    cases_str =
+      get_cases(board)
+      |> Enum.sort(fn {_, x}, {_, y} -> Case.count(x) > Case.count(y) end)
+      |> Enum.map(fn {_, c} -> %{name: Case.name(c), percent: Case.percent(c)} end)
+      |> Enum.reduce("", fn c, acc ->
+        "#{acc}, \n name: #{c.name}, percent: #{c.percent}"
+      end)
+
+    "free_park: #{get_free_park_bounty(board)}" <> "\n" <> "cases: #{cases_str}"
+  end
+
+  defp get(board, key) do
+    Agent.get(board, fn state -> Map.get(state, key) end)
+  end
+
+  # [["Case départ": 0, "Belleville": 1, ...]]
+  defp cases_map do
     [
-      %Case{id: 0, name: "Case départ", count: 0, percent: 0},
-      %Case{id: 1, name: "Boulevard de Belleville", count: 0, percent: 0},
-      %Case{id: 2, name: "Communauté", count: 0, percent: 0},
-      %Case{id: 3, name: "Rue Lecourbe", count: 0, percent: 0},
-      %Case{id: 4, name: "Impôts sur le revenu", count: 0, percent: 0},
-      %Case{id: 5, name: "Gare Montparnasse", count: 0, percent: 0},
-      %Case{id: 6, name: "Rue de Vaugirard", count: 0, percent: 0},
-      %Case{id: 7, name: "Chance", count: 0, percent: 0},
-      %Case{id: 8, name: "Rue de Courcelles", count: 0, percent: 0},
-      %Case{id: 9, name: "Avenue de la République", count: 0, percent: 0},
-      %Case{id: 10, name: "Simple visite", count: 0, percent: 0},
-      %Case{id: 11, name: "Boulevard de la Villette", count: 0, percent: 0},
-      %Case{id: 12, name: "Compagnie d'Électricité", count: 0, percent: 0},
-      %Case{id: 13, name: "Avenue de Neuilly", count: 0, percent: 0},
-      %Case{id: 14, name: "Rue de Paradis", count: 0, percent: 0},
-      %Case{id: 15, name: "Gare de Lyon", count: 0, percent: 0},
-      %Case{id: 16, name: "Avenue Mozart", count: 0, percent: 0},
-      %Case{id: 17, name: "Caisse de communauté", count: 0, percent: 0},
-      %Case{id: 18, name: "Boulevard Saint-Michel", count: 0, percent: 0},
-      %Case{id: 19, name: "Place Pigalle", count: 0, percent: 0},
-      %Case{id: 20, name: "Parc gratuit", count: 0, percent: 0},
-      %Case{id: 21, name: "Avenue Matignon", count: 0, percent: 0},
-      %Case{id: 22, name: "Chance", count: 0, percent: 0},
-      %Case{id: 23, name: "Boulevard Malesherbes", count: 0, percent: 0},
-      %Case{id: 24, name: "Avenue Henri-Martin", count: 0, percent: 0},
-      %Case{id: 25, name: "Gare du Nord", count: 0, percent: 0},
-      %Case{id: 26, name: "Faubourg Saint-Honoré", count: 0, percent: 0},
-      %Case{id: 27, name: "Place de la Bourse", count: 0, percent: 0},
-      %Case{id: 28, name: "Compagnie des Eaux", count: 0, percent: 0},
-      %Case{id: 29, name: "Rue La Fayette", count: 0, percent: 0},
-      %Case{id: 30, name: "Allez en prison", count: 0, percent: 0},
-      %Case{id: 31, name: "Avenue de Breteuil", count: 0, percent: 0},
-      %Case{id: 32, name: "Avenue Foch", count: 0, percent: 0},
-      %Case{id: 33, name: "Caisse de communauté", count: 0, percent: 0},
-      %Case{id: 34, name: "Boulevard des Capucines", count: 0, percent: 0},
-      %Case{id: 35, name: "Gare Saint-Lazare", count: 0, percent: 0},
-      %Case{id: 36, name: "Chance", count: 0, percent: 0},
-      %Case{id: 37, name: "Avenue des Champs-Élysées", count: 0, percent: 0},
-      %Case{id: 38, name: "Taxe de luxe", count: 0, percent: 0},
-      %Case{id: 39, name: "Rue de la Paix", count: 0, percent: 0}
+      "Case départ",
+      "Boulevard de Belleville",
+      "Communauté",
+      "Rue Lecourbe",
+      "Impôts sur le revenu",
+      "Gare Montparnasse",
+      "Rue de Vaugirard",
+      "Chance",
+      "Rue de Courcelles",
+      "Avenue de la République",
+      "Simple visite",
+      "Boulevard de la Villette",
+      "Compagnie d'Électricité",
+      "Avenue de Neuilly",
+      "Rue de Paradis",
+      "Gare de Lyon",
+      "Avenue Mozart",
+      "Caisse de communauté",
+      "Boulevard Saint-Michel",
+      "Place Pigalle",
+      "Parc gratuit",
+      "Avenue Matignon",
+      "Chance",
+      "Boulevard Malesherbes",
+      "Avenue Henri-Martin",
+      "Gare du Nord",
+      "Faubourg Saint-Honoré",
+      "Place de la Bourse",
+      "Compagnie des Eaux",
+      "Rue La Fayette",
+      "Allez en prison",
+      "Avenue de Breteuil",
+      "Avenue Foch",
+      "Caisse de communauté",
+      "Boulevard des Capucines",
+      "Gare Saint-Lazare",
+      "Chance",
+      "Avenue des Champs-Élysées",
+      "Taxe de luxe",
+      "Rue de la Paix"
     ]
+    |> Enum.with_index()
   end
 end

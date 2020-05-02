@@ -18,7 +18,7 @@ defmodule Monopoly.MixProject do
   def application do
     [
       extra_applications: [:logger],
-      env: [log_level: :all, default_turn: 50]
+      env: [log_level: :basic, default_turn: 50_000]
     ]
   end
 

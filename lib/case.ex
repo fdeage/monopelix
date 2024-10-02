@@ -1,4 +1,4 @@
-defmodule Monopoly.Case do
+defmodule Monopelix.Case do
   defstruct [:name, :count, :percent]
 
   alias __MODULE__

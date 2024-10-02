@@ -1,5 +1,5 @@
-defmodule Monopoly.Decks do
-  alias Monopoly.{Card, Logger}
+defmodule Monopelix.Decks do
+  alias Monopelix.{Card, Logger}
 
   # A deck is a List of %Card{}
   def chance_start_link do

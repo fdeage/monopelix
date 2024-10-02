@@ -1,8 +1,8 @@
-defmodule MonopolyTest do
+defmodule MonopelixTest do
   use ExUnit.Case
-  doctest Monopoly
+  doctest Monopelix
 
   test "greets the world" do
-    assert Monopoly.hello() == :world
+    assert Monopelix.hello() == :world
   end
 end

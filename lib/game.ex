@@ -1,5 +1,5 @@
-defmodule Monopoly.Game do
-  alias Monopoly.{Board, Player, Logger}
+defmodule Monopelix.Game do
+  alias Monopelix.{Board, Player, Logger}
 
   def play_turn(3, player, board) do
     Logger.print("Three doubles in a row")
@@ -8,8 +8,8 @@ defmodule Monopoly.Game do
   end
 
   def play_turn(double_count, player, board) do
-    dice1 = Board.draw_dice()
-    dice2 = Board.draw_dice()
+    dice1 = Board.roll_dice()
+    dice2 = Board.roll_dice()
 
     Logger.print("Die: #{dice1} + #{dice2}", dice1 + dice2)
 
@@ -99,35 +99,5 @@ defmodule Monopoly.Game do
     end
 
     repeat(count - 1, player, board)
-  end
-
-  defp parse_args(args) do
-    options = [switches: [turn: :number, debug: :boolean], aliases: [t: :turn, d: :debug]]
-
-    {opts, word, _} =
-      args
-      |> OptionParser.parse(options)
-
-    {opts, List.to_string(word)}
-  end
-
-  def main(args) do
-    {player, board} = init(name: "Féfé")
-
-    {opts, _word} = parse_args(args)
-
-    turn =
-      if opts[:turn] do
-        opts[:turn]
-        |> String.to_integer()
-      else
-        Application.get_env(:monopoly, :default_turn)
-      end
-
-    {:ok, :game_over} = repeat(turn, player, board)
-
-    Board.compute_percentages(board)
-    Board.to_string(board) |> Logger.print()
-    Player.to_string(player) |> Logger.print()
   end
 end

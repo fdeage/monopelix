@@ -1,4 +1,4 @@
-defmodule Monopoly.Card do
+defmodule Monopelix.Card do
   defstruct [:name, :type, :opt]
 
   alias __MODULE__

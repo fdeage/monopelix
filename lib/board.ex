@@ -1,7 +1,7 @@
-defmodule Monopoly.Board do
+defmodule Monopelix.Board do
   defstruct [:cases, :free_park, :chance_deck, :community_deck]
 
-  alias Monopoly.{Case, Decks}
+  alias Monopelix.{Case, Decks}
   alias __MODULE__
 
   # %Board{free_park: pidxx1, cases: %{c0: pidxx2, c1: pidxx3}}
@@ -41,7 +41,7 @@ defmodule Monopoly.Board do
     community_deck
   end
 
-  def draw_dice do
+  def roll_dice do
     :rand.uniform(6)
   end
 

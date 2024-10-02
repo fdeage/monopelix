@@ -1,4 +1,4 @@
-defmodule Monopoly.Logger do
+defmodule Monopelix.Logger do
   def print(msg) when is_binary(msg) or is_integer(msg) or is_atom(msg) do
     if should_log?() do
       IO.puts(msg)

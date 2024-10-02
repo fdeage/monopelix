@@ -1,8 +1,8 @@
-defmodule Monopoly.Player do
+defmodule Monopelix.Player do
   @enforce_keys [:name, :status, :case_id, :money, :out_of_jail_card, :turn, :die_cast, :move]
   defstruct [:name, :status, :case_id, :money, :out_of_jail_card, :turn, :die_cast, :move]
 
-  alias Monopoly.Logger
+  alias Monopelix.Logger
   alias __MODULE__
 
   def start_link(name: name) do
